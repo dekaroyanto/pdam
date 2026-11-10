@@ -1,69 +1,241 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import Navbar from '@/components/Navbar';
+import DbStatusModal from '@/components/DbStatusModal';
+import DashboardView from '@/components/DashboardView';
+import DailyInputView from '@/components/DailyInputView';
+import DailyReportsView from '@/components/DailyReportsView';
+import WeeklyReportView from '@/components/WeeklyReportView';
+import MasterDataView from '@/components/MasterDataView';
+import { Loader2 } from 'lucide-react';
 
 export default function Home() {
+  const [currentTab, setCurrentTab] = useState('dashboard');
+  const [dbStatus, setDbStatus] = useState(null);
+  const [isDbModalOpen, setIsDbModalOpen] = useState(false);
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
+  const [dailyReports, setDailyReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  // Edit / view detail state
+  const [editingReportId, setEditingReportId] = useState(null);
+  const [selectedReportId, setSelectedReportId] = useState(null);
+
+  // Fetch DB Status
+  const fetchDbStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/db-status');
+      const data = await res.json();
+      setDbStatus(data);
+      return data;
+    } catch (err) {
+      setDbStatus({
+        connected: false,
+        error: err.message,
+        help: 'Gagal menghubungi server aplikasi',
+      });
+      return null;
+    }
+  }, []);
+
+  // Fetch Projects
+  const fetchProjects = useCallback(async () => {
+    try {
+      const res = await fetch('/api/projects');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setProjects(data);
+        if (data.length > 0 && !selectedProjectId) {
+          setSelectedProjectId(data[0].id);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching projects:', err);
+    }
+  }, [selectedProjectId]);
+
+  // Fetch Daily Reports for active project
+  const fetchDailyReports = useCallback(async (projId) => {
+    if (!projId) {
+      setDailyReports([]);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/daily-reports?project_id=${projId}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setDailyReports(data);
+      }
+    } catch (err) {
+      console.error('Error fetching daily reports:', err);
+    }
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    const init = async () => {
+      setLoading(true);
+      await fetchDbStatus();
+      await fetchProjects();
+      setLoading(false);
+    };
+    init();
+  }, [fetchDbStatus, fetchProjects]);
+
+  // When selected project changes, fetch reports
+  useEffect(() => {
+    if (selectedProjectId) {
+      fetchDailyReports(selectedProjectId);
+    }
+  }, [selectedProjectId, fetchDailyReports]);
+
+  // 1-Click Seed Data Handler
+  const handleSeedData = async () => {
+    setIsSeeding(true);
+    try {
+      const res = await fetch('/api/seed', { method: 'POST' });
+      let json = {};
+      try {
+        json = await res.json();
+      } catch (parseErr) {
+        throw new Error('Server mengembalikan respon kosong atau gagal terhubung ke database. Periksa DB_HOST di .env.local.');
+      }
+
+      if (json.success) {
+        await fetchProjects();
+        if (json.project_id) {
+          setSelectedProjectId(json.project_id);
+          await fetchDailyReports(json.project_id);
+        }
+        await fetchDbStatus();
+        alert('Master data awal PDAM berhasil diisi!');
+      } else {
+        alert(json.help || json.error || 'Gagal mengisi data awal PDAM. Periksa koneksi database.');
+        setIsDbModalOpen(true);
+      }
+    } catch (e) {
+      console.error('Error seeding data:', e);
+      alert(e.message || 'Gagal menghubungkan ke database Hostinger.');
+      setIsDbModalOpen(true);
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  const handleEditReport = (id) => {
+    setEditingReportId(id);
+    setCurrentTab('input');
+  };
+
+  const handleInputSaved = (savedId) => {
+    setEditingReportId(null);
+    fetchDailyReports(selectedProjectId);
+    setCurrentTab('daily');
+    setSelectedReportId(savedId);
+  };
+
+  const selectedProject = projects.find((p) => String(p.id) === String(selectedProjectId)) || projects[0];
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.js
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col selection:bg-blue-500 selection:text-white">
+      {/* Header & Mobile Bottom Nav */}
+      <Navbar
+        currentTab={currentTab}
+        setCurrentTab={(tab) => {
+          if (tab === 'input' && currentTab !== 'input') {
+            setEditingReportId(null);
+          }
+          setCurrentTab(tab);
+        }}
+        dbStatus={dbStatus}
+        onOpenDbModal={() => setIsDbModalOpen(true)}
+        projects={projects}
+        selectedProjectId={selectedProjectId}
+        onSelectProject={(id) => setSelectedProjectId(id)}
+      />
+
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-5xl w-full mx-auto p-3 sm:p-5">
+        {loading ? (
+          <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3 text-slate-400">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            <p className="text-xs font-medium">Menghubungkan ke database PDAM...</p>
+          </div>
+        ) : (
+          <>
+            {/* View Switching */}
+            {currentTab === 'dashboard' && (
+              <DashboardView
+                project={selectedProject}
+                projects={projects}
+                dailyReports={dailyReports}
+                onNavigate={(tab) => {
+                  if (tab === 'input') setEditingReportId(null);
+                  setCurrentTab(tab);
+                }}
+                onSeedData={handleSeedData}
+                isSeeding={isSeeding}
+                onSelectReport={(id) => {
+                  setSelectedReportId(id);
+                  setCurrentTab('daily');
+                }}
+              />
+            )}
+
+            {currentTab === 'input' && (
+              <DailyInputView
+                projectId={selectedProjectId}
+                editReportId={editingReportId}
+                onSaveSuccess={handleInputSaved}
+                onCancel={() => {
+                  setEditingReportId(null);
+                  setCurrentTab('daily');
+                }}
+              />
+            )}
+
+            {currentTab === 'daily' && (
+              <DailyReportsView
+                projectId={selectedProjectId}
+                selectedReportId={selectedReportId}
+                onClearSelectedReport={() => setSelectedReportId(null)}
+                onEditReport={handleEditReport}
+                onAddNew={() => {
+                  setEditingReportId(null);
+                  setCurrentTab('input');
+                }}
+              />
+            )}
+
+            {currentTab === 'weekly' && (
+              <WeeklyReportView projectId={selectedProjectId} />
+            )}
+
+            {currentTab === 'master' && (
+              <MasterDataView
+                projectId={selectedProjectId}
+                projects={projects}
+                onRefreshProjects={fetchProjects}
+                onSeedData={handleSeedData}
+                isSeeding={isSeeding}
+                onOpenDbModal={() => setIsDbModalOpen(true)}
+                dbStatus={dbStatus}
+              />
+            )}
+          </>
+        )}
       </main>
+
+      {/* DB Status & Hostinger Setup Modal */}
+      <DbStatusModal
+        isOpen={isDbModalOpen}
+        onClose={() => setIsDbModalOpen(false)}
+        dbStatus={dbStatus}
+        onRefresh={fetchDbStatus}
+      />
     </div>
   );
 }
