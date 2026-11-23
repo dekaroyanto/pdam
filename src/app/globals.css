@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #f9fafb;
+  --foreground: #111827;
 }
 
 @theme inline {
@@ -12,13 +12,6 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #020617;
-    --foreground: #f8fafc;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
@@ -26,35 +19,25 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Safe area for mobile iPhones with home indicator */
+/* Safe area for mobile devices */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 1rem);
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Print Styles */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 12mm 15mm;
+    margin: 10mm 12mm;
   }
 
   body {
     background: #ffffff !important;
     color: #000000 !important;
-    font-size: 11pt !important;
+    font-size: 10pt !important;
   }
 
-  header, nav, button:not(.printable) {
+  header, nav, button:not(.printable), .no-print {
     display: none !important;
   }
 
@@ -65,11 +48,12 @@ body {
   }
 
   table {
-    page-break-inside: auto;
+    width: 100% !important;
+    border-collapse: collapse !important;
   }
 
-  tr {
-    page-break-inside: avoid;
-    page-break-after: auto;
+  th, td {
+    border: 1px solid #d1d5db !important;
+    padding: 4px 8px !important;
   }
 }

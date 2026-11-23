@@ -1,23 +1,19 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
-  Building2, 
-  Calendar, 
-  FileText, 
-  CheckCircle2, 
-  ArrowRight, 
   Plus, 
-  Users, 
-  Wrench, 
-  Clock, 
-  Sparkles,
-  ChevronRight,
+  Calendar, 
+  ChevronRight, 
+  ChevronDown, 
+  ChevronUp,
   TrendingUp,
-  MapPin,
-  CalendarCheck
+  FileText,
+  Clock,
+  Layers,
+  Users
 } from 'lucide-react';
-import { formatNumberIndo } from '@/lib/calculator';
+import { formatNumberIndo, formatDateIndo, cleanDateStr } from '@/lib/calculator';
 
 export default function DashboardView({
   project,
@@ -28,181 +24,268 @@ export default function DashboardView({
   isSeeding,
   onSelectReport
 }) {
-  const latestReport = dailyReports[0];
+  // State for which week cards are expanded in the dashboard
+  const [expandedWeeks, setExpandedWeeks] = useState(() => {
+    // Expand the latest week by default if available
+    if (dailyReports.length > 0) {
+      return { [dailyReports[0].minggu_ke]: true };
+    }
+    return {};
+  });
+
+  const toggleWeek = (weekNum) => {
+    setExpandedWeeks((prev) => ({
+      ...prev,
+      [weekNum]: !prev[weekNum]
+    }));
+  };
+
+  // Group daily reports by minggu_ke
+  const weekGroupsMap = {};
+  dailyReports.forEach((report) => {
+    const w = report.minggu_ke;
+    if (!weekGroupsMap[w]) {
+      weekGroupsMap[w] = {
+        mingguKe: w,
+        reports: [],
+        totalItems: 0,
+        totalResources: 0,
+        dates: []
+      };
+    }
+    weekGroupsMap[w].reports.push(report);
+    weekGroupsMap[w].totalItems += (report.total_job_progress || 0);
+    weekGroupsMap[w].totalResources += (report.total_resource_usages || 0);
+    weekGroupsMap[w].dates.push(report.tanggal);
+  });
+
+  // Convert to sorted array of weeks (latest week first)
+  const weekList = Object.values(weekGroupsMap).sort((a, b) => b.mingguKe - a.mingguKe);
 
   return (
-    <div className="space-y-5 pb-20 md:pb-6">
-      {/* Project Card */}
+    <div className="space-y-4 pb-20 md:pb-6">
+      {/* Project Summary Banner */}
       {project ? (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 text-white p-5 shadow-lg border border-blue-900/30">
-          <div className="absolute top-0 right-0 -mt-6 -mr-6 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
-          
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-500/20 text-blue-300 border border-blue-400/20">
-                <Building2 className="w-3.5 h-3.5" />
-                Proyek Aktif
-              </span>
-              <span className="text-xs text-blue-200/70 font-mono">
-                SPP: {project.no_spp || '-'}
-              </span>
-            </div>
-
+        <div className="bg-white rounded-lg border border-zinc-200 p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-zinc-100">
             <div>
-              <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white leading-snug">
+              <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Proyek Aktif</span>
+              <h2 className="text-base font-semibold text-zinc-900 mt-0.5">
                 {project.nama_pekerjaan}
               </h2>
-              <p className="text-xs text-slate-300 mt-1 flex items-center gap-2">
-                <span>Pelaksana: <strong>{project.pelaksana || 'PDAM Tirta'}</strong></span>
-                {project.waktu_pelaksanaan && (
-                  <span>&bull; Waktu: {project.waktu_pelaksanaan} Hari Kalender</span>
-                )}
-              </p>
             </div>
+            <div className="flex items-center gap-2">
+              {project.no_spp && (
+                <span className="text-xs text-zinc-500 font-mono bg-zinc-50 border border-zinc-200 px-2 py-1 rounded">
+                  SPP: {project.no_spp}
+                </span>
+              )}
+              <button
+                onClick={() => onNavigate('input')}
+                className="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium flex items-center gap-1.5 transition"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Input Laporan</span>
+              </button>
+            </div>
+          </div>
 
-            {/* Quick Metrics */}
-            <div className="grid grid-cols-3 gap-2 pt-3 border-t border-white/10 text-center">
-              <div className="bg-white/5 p-2 rounded-xl">
-                <div className="text-[10px] text-blue-200/70 uppercase">Total Lap.</div>
-                <div className="text-base font-bold text-white mt-0.5">{dailyReports.length}</div>
-              </div>
-              <div className="bg-white/5 p-2 rounded-xl">
-                <div className="text-[10px] text-blue-200/70 uppercase">Minggu Terakhir</div>
-                <div className="text-base font-bold text-cyan-300 mt-0.5">
-                  Minggu {latestReport ? latestReport.minggu_ke : '-'}
-                </div>
-              </div>
-              <div className="bg-white/5 p-2 rounded-xl">
-                <div className="text-[10px] text-blue-200/70 uppercase">Laporan Terakhir</div>
-                <div className="text-xs font-semibold text-emerald-300 mt-1 truncate">
-                  {latestReport ? latestReport.tanggal : 'Belum Ada'}
-                </div>
-              </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-3 text-xs">
+            <div>
+              <span className="text-zinc-400 block text-[11px]">Pelaksana</span>
+              <span className="font-medium text-zinc-800">{project.pelaksana || '-'}</span>
+            </div>
+            <div>
+              <span className="text-zinc-400 block text-[11px]">Pengawas Bagian</span>
+              <span className="font-medium text-zinc-800">{project.pengawas_bagian || '-'}</span>
+            </div>
+            <div>
+              <span className="text-zinc-400 block text-[11px]">Kepala Seksi</span>
+              <span className="font-medium text-zinc-800">{project.kepala_seksi_bagian || '-'}</span>
+            </div>
+            <div>
+              <span className="text-zinc-400 block text-[11px]">Waktu Kontrak</span>
+              <span className="font-medium text-zinc-800">
+                {project.waktu_pelaksanaan ? `${project.waktu_pelaksanaan} Hari Kalender` : '-'}
+              </span>
+            </div>
+            <div>
+              <span className="text-zinc-400 block text-[11px]">Total Laporan Masuk</span>
+              <span className="font-medium text-zinc-800">{dailyReports.length} Hari</span>
+            </div>
+            <div>
+              <span className="text-zinc-400 block text-[11px]">Jumlah Minggu Berjalan</span>
+              <span className="font-medium text-zinc-800">{weekList.length} Minggu</span>
             </div>
           </div>
         </div>
       ) : (
-        <div className="p-6 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 text-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-300 flex items-center justify-center mx-auto">
-            <Sparkles className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="font-bold text-slate-900 dark:text-white text-base">Belum Ada Proyek PDAM</h3>
-            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-md mx-auto">
-              Database Anda sudah terhubung. Ingin langsung mengisi proyek template dan master data standar PDAM (pekerjaan galian, pipa HDPE, valve, tenaga kerja, dan alat)?
-            </p>
-          </div>
+        <div className="bg-white p-6 rounded-lg border border-zinc-200 text-center space-y-3">
+          <h3 className="font-semibold text-zinc-900 text-sm">Belum Ada Proyek Terpilih</h3>
+          <p className="text-xs text-zinc-500 max-w-sm mx-auto">
+            Pilih proyek di dropdown atas atau isi data master standar PDAM.
+          </p>
           <button
             onClick={onSeedData}
             disabled={isSeeding}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-md active:scale-95 transition disabled:opacity-50"
+            className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium disabled:opacity-50"
           >
-            <Sparkles className="w-4 h-4" />
-            {isSeeding ? 'Membuat Data Awal...' : 'Isi Data Master PDAM Otomatis'}
+            {isSeeding ? 'Membuat Data...' : 'Isi Data Master PDAM Standar'}
           </button>
         </div>
       )}
 
-      {/* Quick Action Grid */}
-      <div className="grid grid-cols-2 gap-3">
-        <button
-          onClick={() => onNavigate('input')}
-          className="flex flex-col items-start p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 shadow-xs hover:border-blue-500 hover:shadow-md transition text-left group"
-        >
-          <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-            <Plus className="w-5 h-5" />
-          </div>
-          <div className="mt-3 font-semibold text-slate-900 dark:text-white text-sm">
-            Input Laporan Harian
-          </div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-            Catat progres fisik & sumber daya hari ini
-          </div>
-        </button>
+      {/* Section Title */}
+      <div className="flex items-center justify-between pt-1">
+        <div>
+          <h3 className="text-sm font-semibold text-zinc-900">
+            Daftar Laporan Per Minggu
+          </h3>
+          <p className="text-xs text-zinc-400">
+            Klik card minggu untuk melihat daftar laporan harian di minggu tersebut
+          </p>
+        </div>
 
-        <button
-          onClick={() => onNavigate('weekly')}
-          className="flex flex-col items-start p-4 rounded-2xl bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 shadow-xs hover:border-cyan-500 hover:shadow-md transition text-left group"
-        >
-          <div className="w-10 h-10 rounded-xl bg-cyan-100 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-            <TrendingUp className="w-5 h-5" />
-          </div>
-          <div className="mt-3 font-semibold text-slate-900 dark:text-white text-sm">
-            Rekap Mingguan
-          </div>
-          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-            Lihat akumulasi mingguan & cetak PDF
-          </div>
-        </button>
+        {weekList.length > 0 && (
+          <button
+            onClick={() => onNavigate('weekly')}
+            className="text-xs text-blue-600 hover:underline font-medium flex items-center gap-1"
+          >
+            <span>Rekap Semua Minggu</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
-      {/* Recent Daily Reports */}
-      <div className="bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700/80 shadow-xs overflow-hidden">
-        <div className="p-4 border-b border-slate-100 dark:border-slate-700/60 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CalendarCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <h3 className="font-semibold text-slate-900 dark:text-white text-sm">
-              Laporan Harian Terbaru
-            </h3>
-          </div>
-          <button
-            onClick={() => onNavigate('daily')}
-            className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline flex items-center gap-1"
-          >
-            Lihat Semua
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
+      {/* Week Cards List */}
+      <div className="space-y-3">
+        {weekList.length > 0 ? (
+          weekList.map((week) => {
+            const isExpanded = expandedWeeks[week.mingguKe];
+            const cleanedDates = week.dates.map(cleanDateStr).filter(Boolean).sort();
+            const minDate = cleanedDates[0];
+            const maxDate = cleanedDates[cleanedDates.length - 1];
+            const dateRangeStr = cleanedDates.length === 0 
+              ? '-' 
+              : minDate === maxDate 
+                ? formatDateIndo(minDate) 
+                : `${formatDateIndo(minDate)} s.d. ${formatDateIndo(maxDate)}`;
 
-        <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
-          {dailyReports.length > 0 ? (
-            dailyReports.slice(0, 5).map((r) => (
+            return (
               <div
-                key={r.id}
-                onClick={() => onSelectReport(r.id)}
-                className="p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition flex items-center justify-between gap-3 cursor-pointer group"
+                key={week.mingguKe}
+                className="bg-white rounded-lg border border-zinc-200 overflow-hidden transition"
               >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-slate-900 dark:text-white text-sm">
-                      {r.hari}, {r.tanggal}
-                    </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">
-                      Minggu ke-{r.minggu_ke}
-                    </span>
+                {/* Week Card Header (Clickable) */}
+                <div
+                  onClick={() => toggleWeek(week.mingguKe)}
+                  className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-zinc-50 select-none border-b border-transparent transition-colors"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm text-zinc-900">
+                        Laporan Minggu Ke-{week.mingguKe}
+                      </span>
+                      <span className="text-[11px] px-2 py-0.2 rounded bg-zinc-100 text-zinc-700 font-medium">
+                        {week.reports.length} Laporan Harian
+                      </span>
+                    </div>
+
+                    <div className="text-xs text-zinc-500 flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span>Periode: <strong className="text-zinc-700 font-mono">{dateRangeStr}</strong></span>
+                      <span>&bull;</span>
+                      <span>{week.totalItems} catatan fisik</span>
+                    </div>
                   </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-3">
-                    <span>{r.total_job_progress || 0} item pekerjaan</span>
-                    <span>&bull;</span>
-                    <span>{r.total_resource_usages || 0} sumber daya</span>
+
+                  <div className="flex items-center gap-2 text-zinc-400">
+                    <span className="text-xs text-zinc-500 hidden sm:inline">
+                      {isExpanded ? 'Tutup' : 'Buka List Harian'}
+                    </span>
+                    {isExpanded ? (
+                      <ChevronUp className="w-5 h-5 text-zinc-600" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-zinc-600" />
+                    )}
                   </div>
-                  {r.catatan && (
-                    <p className="text-[11px] text-slate-400 italic line-clamp-1">
-                      &quot;{r.catatan}&quot;
-                    </p>
-                  )}
                 </div>
 
-                <div className="text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  <ChevronRight className="w-5 h-5" />
-                </div>
+                {/* Expanded Daily Reports List */}
+                {isExpanded && (
+                  <div className="border-t border-zinc-200 bg-zinc-50/50">
+                    <div className="divide-y divide-zinc-200">
+                      {week.reports.map((report) => (
+                        <div
+                          key={report.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectReport(report.id);
+                          }}
+                          className="p-3 hover:bg-white transition cursor-pointer flex items-center justify-between gap-3 text-xs"
+                        >
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-zinc-900">
+                                {report.hari}, {formatDateIndo(report.tanggal)}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-zinc-500 flex items-center gap-2">
+                              <span>{report.total_job_progress || 0} item pekerjaan</span>
+                              <span>&bull;</span>
+                              <span>{report.total_resource_usages || 0} sumber daya</span>
+                            </div>
+                            {report.catatan && (
+                              <p className="text-[11px] text-zinc-400 italic line-clamp-1">
+                                &quot;{report.catatan}&quot;
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 text-blue-600 font-medium shrink-0">
+                            <span>Buka Laporan</span>
+                            <ChevronRight className="w-4 h-4" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Footer link to jump to Weekly Report tab for this week */}
+                    <div className="p-2.5 bg-zinc-50 border-t border-zinc-200 text-right">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onNavigate('weekly');
+                        }}
+                        className="text-xs text-zinc-600 hover:text-zinc-900 font-medium inline-flex items-center gap-1"
+                      >
+                        <TrendingUp className="w-3.5 h-3.5" />
+                        <span>Lihat Rekapitulasi Lengkap Minggu Ke-{week.mingguKe}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            ))
-          ) : (
-            <div className="p-8 text-center text-slate-400 space-y-2">
-              <FileText className="w-8 h-8 mx-auto opacity-50" />
-              <p className="text-xs">Belum ada laporan harian yang dicatat</p>
-              <button
-                onClick={() => onNavigate('input')}
-                className="text-xs text-blue-600 font-semibold hover:underline"
-              >
-                + Mulai Buat Laporan Pertama
-              </button>
+            );
+          })
+        ) : (
+          <div className="bg-white p-8 rounded-lg border border-zinc-200 text-center space-y-3">
+            <FileText className="w-8 h-8 text-zinc-300 mx-auto" />
+            <div>
+              <h4 className="font-medium text-zinc-900 text-sm">Belum Ada Laporan</h4>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Proyek ini belum memiliki laporan harian yang dicatat.
+              </p>
             </div>
-          )}
-        </div>
+            <button
+              onClick={() => onNavigate('input')}
+              className="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium inline-flex items-center gap-1.5 transition"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Input Laporan Harian Pertama</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-

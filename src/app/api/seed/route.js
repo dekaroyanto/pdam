@@ -18,14 +18,16 @@ export async function POST() {
       projectId = existingProjects[0].id;
     } else {
       const [pRes] = await conn.query(
-        `INSERT INTO projects (nama_pekerjaan, no_spp, tanggal_spp, waktu_pelaksanaan, pelaksana)
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO projects (nama_pekerjaan, no_spp, tanggal_spp, waktu_pelaksanaan, pelaksana, pengawas_bagian, kepala_seksi_bagian)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
           'Pengembangan Jaringan Pipa Distribusi Air Minum PDAM Wilayah Barat',
           'SPP/PDAM-DIR/XI/2026/089',
           '2026-10-01',
           90,
-          'PT. TIRTA CIPTA TEKNIK'
+          'PT. TIRTA CIPTA TEKNIK',
+          'Ir. Bambang Supriyadi, M.T.',
+          'Ahmad Fauzi, S.T.'
         ]
       );
       projectId = pRes.insertId;

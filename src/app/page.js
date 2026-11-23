@@ -140,7 +140,7 @@ export default function Home() {
   const selectedProject = projects.find((p) => String(p.id) === String(selectedProjectId)) || projects[0];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col selection:bg-blue-500 selection:text-white">
+    <div className="min-h-screen bg-zinc-50 text-zinc-900 flex flex-col">
       {/* Header & Mobile Bottom Nav */}
       <Navbar
         currentTab={currentTab}

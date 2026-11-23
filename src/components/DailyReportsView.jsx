@@ -3,22 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Calendar, 
-  Search, 
-  Filter, 
-  Eye, 
   Trash2, 
   Edit3, 
   Printer, 
   X, 
-  Layers, 
-  Users, 
-  FileText, 
-  ChevronRight, 
-  Droplets,
-  HardHat,
-  Clock
+  ChevronRight
 } from 'lucide-react';
-import { formatNumberIndo } from '@/lib/calculator';
+import { formatNumberIndo, formatDateIndo } from '@/lib/calculator';
 
 export default function DailyReportsView({
   projectId,
@@ -58,7 +49,6 @@ export default function DailyReportsView({
     fetchReports();
   }, [projectId, filterMinggu]);
 
-  // Open detail if selectedReportId is provided
   useEffect(() => {
     if (selectedReportId) {
       openDetail(selectedReportId);
@@ -98,7 +88,6 @@ export default function DailyReportsView({
     }
   };
 
-  // Group progress items by category for detail view
   const progressByCategory = {};
   if (activeReportDetail?.progress_items) {
     for (const item of activeReportDetail.progress_items) {
@@ -108,44 +97,34 @@ export default function DailyReportsView({
     }
   }
 
-  // Get distinct weeks from current reports
   const distinctWeeks = Array.from(new Set(reports.map((r) => r.minggu_ke))).sort((a, b) => a - b);
 
   return (
-    <div className="space-y-4 pb-20 md:pb-6">
+    <div className="space-y-3 pb-20 md:pb-6">
       {/* Header & Filter */}
-      <div className="bg-white dark:bg-slate-800/90 rounded-2xl p-4 border border-slate-200 dark:border-slate-700/80 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      <div className="bg-white rounded-lg p-3.5 border border-zinc-200 flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            Daftar Laporan Harian
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Total {reports.length} laporan harian tercatat
-          </p>
+          <h2 className="text-sm font-semibold text-zinc-900">Daftar Laporan Harian</h2>
+          <p className="text-xs text-zinc-400">Total {reports.length} laporan</p>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Week Filter */}
-          <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1.5 text-xs">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
-            <select
-              value={filterMinggu}
-              onChange={(e) => setFilterMinggu(e.target.value)}
-              className="bg-transparent font-medium text-slate-800 dark:text-slate-200 focus:outline-none"
-            >
-              <option value="all">Semua Minggu</option>
-              {distinctWeeks.map((w) => (
-                <option key={w} value={w}>
-                  Minggu ke-{w}
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={filterMinggu}
+            onChange={(e) => setFilterMinggu(e.target.value)}
+            className="text-xs bg-zinc-50 border border-zinc-200 rounded px-2.5 py-1.5 text-zinc-700 focus:outline-none"
+          >
+            <option value="all">Semua Minggu</option>
+            {distinctWeeks.map((w) => (
+              <option key={w} value={w}>
+                Minggu {w}
+              </option>
+            ))}
+          </select>
 
           <button
             onClick={onAddNew}
-            className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs active:scale-95 transition"
+            className="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition"
           >
             + Input Baru
           </button>
@@ -153,142 +132,171 @@ export default function DailyReportsView({
       </div>
 
       {/* Reports List */}
-      <div className="space-y-2.5">
+      <div className="bg-white rounded-lg border border-zinc-200 divide-y divide-zinc-100">
         {loading ? (
-          <div className="p-8 text-center text-slate-400 bg-white dark:bg-slate-800 rounded-2xl border">
-            Memuat daftar laporan...
-          </div>
+          <div className="p-6 text-center text-zinc-400 text-xs">Memuat laporan...</div>
         ) : reports.length > 0 ? (
           reports.map((r) => (
             <div
               key={r.id}
               onClick={() => openDetail(r.id)}
-              className="bg-white dark:bg-slate-800/90 rounded-2xl p-4 border border-slate-200 dark:border-slate-700/80 shadow-xs hover:border-blue-500 hover:shadow-md transition cursor-pointer flex items-center justify-between gap-3 group"
+              className="p-3.5 hover:bg-zinc-50 transition cursor-pointer flex items-center justify-between gap-3"
             >
-              <div className="space-y-1">
+              <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm text-slate-900 dark:text-white">
-                    {r.hari}, {r.tanggal}
+                  <span className="font-medium text-xs sm:text-sm text-zinc-900">
+                    {r.hari}, {formatDateIndo(r.tanggal)}
                   </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">
-                    Minggu ke-{r.minggu_ke}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                  <span className="flex items-center gap-1">
-                    <Layers className="w-3.5 h-3.5 text-blue-500" />
-                    {r.total_job_progress || 0} Pekerjaan
-                  </span>
-                  <span>&bull;</span>
-                  <span className="flex items-center gap-1">
-                    <Users className="w-3.5 h-3.5 text-emerald-500" />
-                    {r.total_resource_usages || 0} Sumber Daya
+                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-zinc-100 text-zinc-600 font-mono">
+                    Minggu {r.minggu_ke}
                   </span>
                 </div>
-
-                {r.catatan && (
-                  <p className="text-[11px] text-slate-400 italic line-clamp-1">
-                    &quot;{r.catatan}&quot;
-                  </p>
-                )}
+                <div className="text-[11px] text-zinc-400 mt-0.5">
+                  {r.total_job_progress || 0} pekerjaan &bull; {r.total_resource_usages || 0} sumber daya
+                  {r.catatan && ` — "${r.catatan}"`}
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 text-slate-400 group-hover:text-blue-600 transition">
-                <span className="text-xs font-semibold hidden sm:inline">Lihat Detail</span>
-                <ChevronRight className="w-5 h-5" />
-              </div>
+              <ChevronRight className="w-4 h-4 text-zinc-400 shrink-0" />
             </div>
           ))
         ) : (
-          <div className="p-8 text-center text-slate-400 bg-white dark:bg-slate-800 rounded-2xl border">
-            <Calendar className="w-8 h-8 mx-auto opacity-40 mb-2" />
-            <p className="text-xs">Belum ada laporan harian pada filter ini</p>
+          <div className="p-6 text-center text-zinc-400 text-xs">
+            Belum ada laporan harian pada filter ini.
           </div>
         )}
       </div>
 
-      {/* DETAIL MODAL / SHEET */}
+      {/* Detail Modal */}
       {activeReportDetail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh]">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/40">
+          <div className="relative w-full max-w-2xl bg-white rounded-lg border border-zinc-200 overflow-hidden flex flex-col max-h-[90vh]">
             {/* Modal Header */}
-            <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/60">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
-                  <FileText className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 dark:text-white text-base">
-                    Laporan Harian PDAM
-                  </h3>
-                  <div className="text-xs text-slate-500 dark:text-slate-400">
-                    {activeReportDetail.report.hari}, {activeReportDetail.report.tanggal} &bull; Minggu ke-{activeReportDetail.report.minggu_ke}
-                  </div>
+            <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between bg-zinc-50">
+              <div>
+                <h3 className="font-semibold text-zinc-900 text-sm">
+                  Laporan Harian PDAM
+                </h3>
+                <div className="text-xs text-zinc-500">
+                  {activeReportDetail.report.hari}, {formatDateIndo(activeReportDetail.report.tanggal)} (Minggu {activeReportDetail.report.minggu_ke})
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
                   onClick={() => window.print()}
-                  title="Cetak Laporan Harian"
-                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition"
+                  className="p-1.5 rounded border border-zinc-200 hover:bg-zinc-100 text-zinc-600"
+                  title="Cetak"
                 >
                   <Printer className="w-4 h-4" />
                 </button>
                 <button
                   onClick={closeDetail}
-                  className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 transition"
+                  className="p-1.5 rounded border border-zinc-200 hover:bg-zinc-100 text-zinc-600"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            {/* Modal Scrollable Body (also formatted for print) */}
-            <div className="p-5 overflow-y-auto space-y-5 text-xs text-slate-800 dark:text-slate-200 print:text-black">
-              {/* Project Meta Info */}
-              <div className="bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-1.5">
-                <div className="font-bold text-sm text-slate-900 dark:text-white">
-                  {activeReportDetail.report.nama_pekerjaan}
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-slate-600 dark:text-slate-400 text-[11px]">
-                  <div>No. SPP: <span className="font-semibold text-slate-800 dark:text-slate-200">{activeReportDetail.report.no_spp || '-'}</span></div>
-                  <div>Pelaksana: <span className="font-semibold text-slate-800 dark:text-slate-200">{activeReportDetail.report.pelaksana || '-'}</span></div>
-                  <div>Waktu: <span className="font-semibold text-slate-800 dark:text-slate-200">{activeReportDetail.report.waktu_pelaksanaan ? `${activeReportDetail.report.waktu_pelaksanaan} Hari` : '-'}</span></div>
+            {/* Modal Body */}
+            <div className="p-4 overflow-y-auto space-y-4 text-xs">
+              {/* Project Info */}
+              <div className="bg-zinc-50 p-3 rounded border border-zinc-200 text-zinc-700 space-y-1">
+                <div className="font-semibold text-zinc-900">{activeReportDetail.report.nama_pekerjaan}</div>
+                <div className="flex flex-wrap gap-x-4 text-[11px] text-zinc-500">
+                  <span>SPP: {activeReportDetail.report.no_spp || '-'}</span>
+                  <span>Pelaksana: {activeReportDetail.report.pelaksana || '-'}</span>
                 </div>
               </div>
 
-              {/* SECTION: PROGRES FISIK */}
-              <div className="space-y-2">
-                <div className="font-bold text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
-                  <Layers className="w-4 h-4 text-blue-600" />
-                  Rincian Progres Fisik Harian
-                </div>
+              {/* 1. Tenaga Kerja */}
+              {(() => {
+                const manpower = (activeReportDetail.resource_usages || []).filter(ru => ru.kategori_utama === 'Tenaga Kerja');
+                return (
+                  <div className="space-y-1.5">
+                    <div className="font-semibold text-xs text-zinc-800 uppercase tracking-wide">
+                      1. Tenaga Kerja (Management & Lapangan)
+                    </div>
+                    {manpower.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {manpower.map((ru) => (
+                          <div key={ru.id} className="p-2 rounded border border-zinc-200 bg-zinc-50 flex items-center justify-between">
+                            <div>
+                              <div className="font-medium text-zinc-800">{ru.resource_nama}</div>
+                              <div className="text-[10px] text-zinc-400">{ru.sub_kategori}</div>
+                            </div>
+                            <div className="font-mono font-semibold text-zinc-900">
+                              {formatNumberIndo(ru.jumlah)} <span className="text-[10px] font-normal text-zinc-500">{ru.satuan}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-2.5 text-center text-zinc-400 text-xs border border-zinc-200 rounded">
+                        Tidak ada data tenaga kerja.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
+              {/* 2. Bahan & Alat */}
+              {(() => {
+                const equip = (activeReportDetail.resource_usages || []).filter(ru => ru.kategori_utama !== 'Tenaga Kerja');
+                return (
+                  <div className="space-y-1.5">
+                    <div className="font-semibold text-xs text-zinc-800 uppercase tracking-wide">
+                      2. Bahan & Alat
+                    </div>
+                    {equip.length > 0 ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {equip.map((ru) => (
+                          <div key={ru.id} className="p-2 rounded border border-zinc-200 bg-zinc-50 flex items-center justify-between">
+                            <div>
+                              <div className="font-medium text-zinc-800">{ru.resource_nama}</div>
+                              <div className="text-[10px] text-zinc-400">{ru.sub_kategori}</div>
+                            </div>
+                            <div className="font-mono font-semibold text-zinc-900">
+                              {formatNumberIndo(ru.jumlah)} <span className="text-[10px] font-normal text-zinc-500">{ru.satuan}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-2.5 text-center text-zinc-400 text-xs border border-zinc-200 rounded">
+                        Tidak ada data bahan & alat.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* 3. Pekerjaan yang Dihasilkan */}
+              <div className="space-y-1.5">
+                <div className="font-semibold text-xs text-zinc-800 uppercase tracking-wide">
+                  3. Pekerjaan yang Dihasilkan
+                </div>
                 {Object.keys(progressByCategory).length > 0 ? (
-                  <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden divide-y divide-slate-100 dark:divide-slate-800">
+                  <div className="border border-zinc-200 rounded divide-y divide-zinc-200 overflow-hidden">
                     {Object.entries(progressByCategory).map(([catName, items]) => (
                       <div key={catName}>
-                        <div className="bg-slate-100/80 dark:bg-slate-800 px-3 py-1.5 font-bold text-[11px] text-slate-700 dark:text-slate-300">
+                        <div className="bg-zinc-100 px-3 py-1 font-semibold text-[11px] text-zinc-700">
                           {catName}
                         </div>
-                        <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+                        <div className="divide-y divide-zinc-100">
                           {items.map((it) => (
-                            <div key={it.id} className="p-3 flex items-center justify-between gap-3">
-                              <div className="space-y-0.5">
-                                <div className="font-semibold text-slate-900 dark:text-white text-xs">
-                                  {it.nama_item}
-                                </div>
+                            <div key={it.id} className="p-2.5 flex items-center justify-between gap-2">
+                              <div>
+                                <div className="font-medium text-zinc-800">{it.nama_item}</div>
                                 {it.parameter_values && Object.keys(it.parameter_values).length > 0 && (
-                                  <div className="text-[10px] text-slate-400 font-mono">
-                                    Hitungan ({it.formula_expression || 'dinamis'}):{' '}
-                                    {Object.entries(it.parameter_values).map(([k, v]) => `${k}=${v}`).join(', ')}
+                                  <div className="text-[10px] text-zinc-400 font-mono">
+                                    {it.formula_expression}: {Object.entries(it.parameter_values).map(([k, v]) => `${k}=${v}`).join(', ')}
                                   </div>
                                 )}
                               </div>
-                              <div className="font-mono font-bold text-blue-600 dark:text-blue-400 text-sm shrink-0">
-                                {formatNumberIndo(it.volume_harian)} <span className="text-[11px] font-normal text-slate-500">{it.satuan}</span>
+                              <div className="font-mono font-semibold text-zinc-900 shrink-0">
+                                {formatNumberIndo(it.volume_harian)} <span className="font-normal text-zinc-500">{it.satuan}</span>
                               </div>
                             </div>
                           ))}
@@ -297,75 +305,38 @@ export default function DailyReportsView({
                     ))}
                   </div>
                 ) : (
-                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 text-center text-slate-400 text-xs">
-                    Tidak ada input volume fisik pada hari ini.
+                  <div className="p-2.5 text-center text-zinc-400 text-xs border border-zinc-200 rounded">
+                    Tidak ada catatan volume hari ini.
                   </div>
                 )}
               </div>
 
-              {/* SECTION: PENGGUNAAN SUMBER DAYA */}
-              <div className="space-y-2">
-                <div className="font-bold text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
-                  <Users className="w-4 h-4 text-emerald-600" />
-                  Rincian Penggunaan Sumber Daya
-                </div>
-
-                {activeReportDetail.resource_usages && activeReportDetail.resource_usages.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {activeReportDetail.resource_usages.map((ru) => (
-                      <div
-                        key={ru.id}
-                        className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/40 flex items-center justify-between"
-                      >
-                        <div>
-                          <div className="font-semibold text-slate-900 dark:text-white">
-                            {ru.resource_nama}
-                          </div>
-                          <div className="text-[10px] text-slate-400">
-                            {ru.kategori_utama} &bull; {ru.sub_kategori}
-                          </div>
-                        </div>
-                        <div className="font-mono font-bold text-slate-900 dark:text-white">
-                          {formatNumberIndo(ru.jumlah)} <span className="text-[10px] font-normal text-slate-500">{ru.satuan}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 text-center text-slate-400 text-xs">
-                    Tidak ada sumber daya yang dicatat pada hari ini.
-                  </div>
-                )}
-              </div>
-
-              {/* SECTION: CATATAN LAPANGAN */}
+              {/* 4. Catatan Lapangan & Cuaca */}
               {activeReportDetail.report.catatan && (
-                <div className="space-y-1.5">
-                  <div className="font-bold text-xs uppercase tracking-wider text-slate-600 dark:text-slate-400">
-                    Catatan Lapangan & Cuaca
-                  </div>
-                  <div className="p-3 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/60 text-slate-800 dark:text-slate-200 italic leading-relaxed text-xs">
+                <div className="space-y-1">
+                  <div className="font-semibold text-xs text-zinc-800 uppercase tracking-wide">Catatan Lapangan & Cuaca</div>
+                  <div className="p-2.5 rounded border border-zinc-200 bg-zinc-50 text-zinc-700 text-xs italic">
                     &quot;{activeReportDetail.report.catatan}&quot;
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Modal Footer Actions */}
-            <div className="px-5 py-3.5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            {/* Modal Footer */}
+            <div className="px-4 py-2.5 bg-zinc-50 border-t border-zinc-200 flex items-center justify-between text-xs">
               <div>
                 {deleteConfirmId === activeReportDetail.report.id ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-red-600 font-semibold">Yakin hapus?</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-red-600 font-medium">Hapus laporan?</span>
                     <button
                       onClick={() => handleDelete(activeReportDetail.report.id)}
-                      className="px-2.5 py-1 bg-red-600 text-white rounded-lg text-xs font-bold"
+                      className="px-2 py-0.5 bg-red-600 text-white rounded text-[11px]"
                     >
-                      Ya, Hapus
+                      Ya
                     </button>
                     <button
                       onClick={() => setDeleteConfirmId(null)}
-                      className="px-2 py-1 text-xs text-slate-500"
+                      className="px-2 py-0.5 border border-zinc-300 rounded text-[11px]"
                     >
                       Batal
                     </button>
@@ -373,10 +344,10 @@ export default function DailyReportsView({
                 ) : (
                   <button
                     onClick={() => setDeleteConfirmId(activeReportDetail.report.id)}
-                    className="p-2 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition flex items-center gap-1.5 text-xs font-medium"
+                    className="text-red-600 hover:text-red-700 flex items-center gap-1"
                   >
-                    <Trash2 className="w-4 h-4" />
-                    <span className="hidden sm:inline">Hapus Laporan</span>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Hapus</span>
                   </button>
                 )}
               </div>
@@ -388,16 +359,16 @@ export default function DailyReportsView({
                     closeDetail();
                     onEditReport(id);
                   }}
-                  className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-white transition"
+                  className="px-3 py-1.5 border border-zinc-300 rounded hover:bg-zinc-100 flex items-center gap-1 font-medium"
                 >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  Edit Laporan
+                  <Edit3 className="w-3 h-3" />
+                  Edit
                 </button>
                 <button
                   onClick={closeDetail}
-                  className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition"
+                  className="px-3 py-1.5 bg-zinc-900 text-white rounded hover:bg-zinc-800 font-medium"
                 >
-                  Selesai
+                  Tutup
                 </button>
               </div>
             </div>
@@ -407,4 +378,3 @@ export default function DailyReportsView({
     </div>
   );
 }
-

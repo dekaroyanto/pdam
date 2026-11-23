@@ -82,3 +82,18 @@ export async function PUT(request) {
   }
 }
 
+export async function DELETE(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID sumber daya diperlukan' }, { status: 400 });
+    }
+
+    await query(`DELETE FROM master_resources WHERE id = ?`, [id]);
+    return NextResponse.json({ success: true, message: 'Sumber daya berhasil dihapus' });
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

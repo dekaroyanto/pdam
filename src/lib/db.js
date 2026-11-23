@@ -16,6 +16,7 @@ export function getPool() {
       connectionLimit: 10,
       queueLimit: 0,
       ssl: isSsl ? { rejectUnauthorized: false } : undefined,
+      dateStrings: true,
       enableKeepAlive: true,
       keepAliveInitialDelay: 10000,
     });

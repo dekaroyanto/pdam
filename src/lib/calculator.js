@@ -13,7 +13,6 @@ export function calculateVolume({ formula, params, type = 'RUMUS_DINAMIS', manua
   }
 
   if (!formula || typeof formula !== 'string' || formula.trim() === '') {
-    // If no formula provided, check if manualVolume is present
     const val = parseFloat(manualVolume);
     return isNaN(val) ? 0 : roundToFourDecimals(val);
   }
@@ -21,28 +20,21 @@ export function calculateVolume({ formula, params, type = 'RUMUS_DINAMIS', manua
   try {
     const parsedParams = typeof params === 'string' ? JSON.parse(params) : (params || {});
 
-    // Tokenize / replace variable names with numbers
-    // Replace valid parameter identifiers
     let expression = formula;
-
-    // Sort keys by length descending to prevent substring collisions (e.g. "tinggi_air" vs "tinggi")
     const keys = Object.keys(parsedParams).sort((a, b) => b.length - a.length);
 
     for (const key of keys) {
       const rawVal = parsedParams[key];
       const numVal = parseFloat(rawVal) || 0;
-      // Use word boundary regex or replace identifier
       const regex = new RegExp(`\\b${key}\\b`, 'g');
       expression = expression.replace(regex, `(${numVal})`);
     }
 
-    // Check if expression contains any unauthorized characters (only allow digits, parens, decimal point, and + - * / %)
     if (/[^0-9\.\+\-\*\/\(\)\s%]/.test(expression)) {
       console.warn('Expression contains invalid characters after parameter substitution:', expression);
       return 0;
     }
 
-    // Evaluate safely using Function constructor with no scope access
     // eslint-disable-next-line no-new-func
     const result = Function(`"use strict"; return (${expression})`)();
     
@@ -73,3 +65,41 @@ export function formatNumberIndo(num, maxDecimals = 4) {
   }).format(val);
 }
 
+/**
+ * Extract clean YYYY-MM-DD from any date string or Date object
+ */
+export function cleanDateStr(dateVal) {
+  if (!dateVal) return '';
+  if (typeof dateVal === 'string') {
+    return dateVal.split('T')[0];
+  }
+  if (dateVal instanceof Date) {
+    const y = dateVal.getFullYear();
+    const m = String(dateVal.getMonth() + 1).padStart(2, '0');
+    const d = String(dateVal.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  return String(dateVal).split('T')[0];
+}
+
+/**
+ * Format date to clean Indonesian format (e.g. "23 Nov 2026")
+ */
+export function formatDateIndo(dateVal) {
+  if (!dateVal) return '-';
+  const clean = cleanDateStr(dateVal);
+  const parts = clean.split('-');
+  if (parts.length === 3) {
+    const year = parts[0];
+    const monthIndex = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+      'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
+    ];
+    if (monthIndex >= 0 && monthIndex < 12 && !isNaN(day)) {
+      return `${day} ${months[monthIndex]} ${year}`;
+    }
+  }
+  return clean;
+}
